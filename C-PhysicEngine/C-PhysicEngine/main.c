@@ -11,16 +11,16 @@ void main(int argc, char** argv) {
 
     sfEvent event;
     while (sfRenderWindow_isOpen(window)) {
-        sfRenderWindow_requestFocus(window);
         mousePos = sfMouse_getPositionRenderWindow(window);
         restartClock();
-        sfJoystick_update();
         //gestion des events
         while (sfRenderWindow_pollEvent(window, &event)) {
             if (event.type == sfEvtClosed) {
                 sfRenderWindow_close(window);
             }
         }
+        if (keyPressed(Escape))
+            sfRenderWindow_close(window);
 
         /*↓↓↓updates↓↓↓*/
         updatePlanets();

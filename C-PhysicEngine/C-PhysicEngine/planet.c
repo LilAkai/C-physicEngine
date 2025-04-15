@@ -1,157 +1,96 @@
 #include "planet.h"
 #define WINDOW_SIZE 1080
 #define SCALE_FACTOR (WINDOW_SIZE / 2.0f / 5906380.0f) // Pluton à 5 906 380 km du Soleil
+#define CENTER_X (WINDOW_SIZE / 2.0f)
+#define CENTER_Y (WINDOW_SIZE / 2.0f)
+#define MASS_SCALE 1e-6  // Réduction des masses
+#define RADIUS_SCALE 1e-3 // Réduction des rayons
+const double sunMass = 1989000.f;
 
-void scalePosition(vec2f* pos) {
-    pos->x *= SCALE_FACTOR;
-    pos->y *= SCALE_FACTOR;
+void scalePosition(vector2f pos) {
+    pos.x *= SCALE_FACTOR;
+    pos.y *= SCALE_FACTOR;
 }
 
-void createCircleShape(Presset* body) {
+void createCircleShape(Planet* body) {
     body->shape = sfCircleShape_create();
     if (body->shape != NULL) {
         sfCircleShape_setRadius(body->shape, body->radius);
-        sfCircleShape_setPosition(body->shape, vector2f(body->pos.x, body->pos.y));
-        sfCircleShape_setTexture(body->shape,getTexture(body->name),NULL);
+        sfCircleShape_setPosition(body->shape, body->pos);
+        sfCircleShape_setOrigin(body->shape, vec2f(body->radius, body->radius));
+        sfCircleShape_setTexture(body->shape, getTexture(body->name), NULL);
     }
+    else printf_d("%s init failed: %d", body->name, __LINE__);
 }
-void updatePlanetPos(Presset* planet) {
-    if (planet != NULL) {
+
+void pushNewPlanet(const char* name, float pos, float velocity,float mass,float radius) {
+    Planet* body = malloc(sizeof(Planet));
+
+    body->pos = vec2f(pos,CENTER_Y);
+    scalePosition(body->pos);
+
+    body->velocity = vec2f(0.f, sqrt(6.674e-11 * sunMass / 149600000.0f));
+    body->mass = mass;
+    body->radius = radius * SCALE_FACTOR;
+    body->name = name;
+
+    createCircleShape(body);
+
+    planetList->push_back(&planetList, body);
+}
+
+void initPlanets() {
+    planetList = STD_LIST_CREATE(Planet, 0);
+    pushNewPlanet("sun", 540.0f, 540.0f, 1.989f, 695.7f);
+    pushNewPlanet("mercury", 547.0f, 540.0f, 0.00033f, 2.4397f);
+    pushNewPlanet("venus", 554.0f, 540.0f, 0.0048685f, 6.0518f);
+    pushNewPlanet("earth", 563.0f, 540.0f, 0.005972f, 6.371f);
+    pushNewPlanet("moon", 563.4f, 540.0f, 0.0000735f, 1.737f);
+    pushNewPlanet("mars", 573.0f, 540.0f, 0.00064171f, 3.3895f);
+    pushNewPlanet("jupiter", 618.0f, 540.0f, 1.898f, 69.911f);
+    pushNewPlanet("saturn", 682.0f, 540.0f, 0.56834f, 58.232f);
+    pushNewPlanet("uranus", 827.0f, 540.0f, 0.08681f, 25.362f);
+    pushNewPlanet("neptune", 993.0f, 540.0f, 0.10241f, 24.622f);
+    pushNewPlanet("pluto", 1120.0f, 540.0f, 0.00001303f, 1.1883f);
+}
+
+void updatePlanets() {
+    for (int i = 1; i < planetList->size(planetList); i++){
+        Planet* sun = planetList->getData(planetList, 0);
+        Planet* planet = planetList->getData(planetList, i);
+
+        vector2f direction = subVector(sun->pos, planet->pos);
+        float distance = sqrt(direction.x * direction.x + direction.y * direction.y);
+
+        // Éviter la division par zéro
+        if (distance < 1.0f) return;
+
+        // Calcul de la force gravitationnelle
+        float force = (gravitionalConstant * sunMass * planet->mass) / (distance * distance);
+        vector2f acceleration = vec2f(force * direction.x / planet->mass, force * direction.y / planet->mass);        
+
+        // Mise à jour des vitesses
+        planet->velocity.x += acceleration.x * dt;
+        planet->velocity.y += acceleration.y * dt;
+
+        // Mise à jour des positions
+        planet->pos.x += planet->velocity.x * dt;
+        planet->pos.y += planet->velocity.y * dt;
+
+        //printf_d("%s pos moved\n", planet->name);
+        printf_d("\n\n%s pos(%g,%g) | velo(%g,%g) | deltaTime : %g\n\n", planet->name, planet->pos.x, planet->pos.y, planet->velocity.x, planet->velocity.y, dt);
+
+        // Mise à jour graphique
         sfCircleShape_setPosition(planet->shape, planet->pos);
     }
 }
-#pragma region Planets
-void initSun(Presset* sun) {
-    sun->name = "sun";
-    sun->pos = vector2f(0.0f, 0.0f);
-    scalePosition(&sun->pos);
-    sun->velocity = vector2f(0.0f, 0.0f);
-    sun->mass = 1989000.0f;
-    sun->radius = 695700.0f * SCALE_FACTOR;
-    createCircleShape(sun);
-}
-void initMercury(Presset* mercury) {
-    mercury->name = "mercury";
-    mercury->pos = vector2f(57900.0f, 0.0f);
-    scalePosition(&mercury->pos);
-    mercury->velocity = vector2f(0.0f, 47.87f);
-    mercury->mass = 330.11f;
-    mercury->radius = 2439.7f * SCALE_FACTOR;
-    createCircleShape(mercury);
-}
-void initVenus(Presset* venus) {
-    venus->name = "venus";
-    venus->pos = vector2f(108200.0f, 0.0f);
-    scalePosition(&venus->pos);
-    venus->velocity = vector2f(0.0f, 35.02f);
-    venus->mass = 4868.5f;
-    venus->radius = 6051.8f * SCALE_FACTOR;
-    createCircleShape(venus);
-}
-void initEarth(Presset* earth) {
-    earth->name = "earth";
-    earth->pos = vector2f(149600.0f, 0.0f);
-    scalePosition(&earth->pos);
-    earth->velocity = vector2f(0.0f, 29.78f);
-    earth->mass = 5972.0f;
-    earth->radius = 6371.0f * SCALE_FACTOR;
-    createCircleShape(earth);
-}
-void initMoon(Presset* moon) {
-    moon->name = "moon";
-    moon->pos = vector2f(149600.0f + 384.4f, 0.0f);
-    scalePosition(&moon->pos);
-    moon->velocity = vector2f(0.0f, 29.78f + 1.022f);
-    moon->mass = 73.5f;
-    moon->radius = 1737.0f * SCALE_FACTOR;
-    createCircleShape(moon);
-}
-void initMars(Presset* mars) {
-    mars->name = "mars";
-    mars->pos = vector2f(227940.0f, 0.0f);
-    scalePosition(&mars->pos);
-    mars->velocity = vector2f(0.0f, 24.077f);
-    mars->mass = 641.71f;
-    mars->radius = 3389.5f * SCALE_FACTOR;
-    createCircleShape(mars);
-}
-void initJupiter(Presset* jupiter) {
-    jupiter->name = "jupiter";
-    jupiter->pos = vector2f(778330.0f, 0.0f);
-    scalePosition(&jupiter->pos);
-    jupiter->velocity = vector2f(0.0f, 13.07f);
-    jupiter->mass = 1898000.0f;
-    jupiter->radius = 69911.0f * SCALE_FACTOR;
-    createCircleShape(jupiter);
-}
-void initSaturn(Presset* saturn) {
-    saturn->name = "saturn";
-    saturn->pos = vector2f(1429400.0f, 0.0f);
-    scalePosition(&saturn->pos);
-    saturn->velocity = vector2f(0.0f, 9.69f);
-    saturn->mass = 568340.0f;
-    saturn->radius = 58232.0f * SCALE_FACTOR;
-    createCircleShape(saturn);
-}
-void initUranus(Presset* uranus) {
-    uranus->name = "uranus";
-    uranus->pos = vector2f(2870990.0f, 0.0f);
-    scalePosition(&uranus->pos);
-    uranus->velocity = vector2f(0.0f, 6.81f);
-    uranus->mass = 86810.0f;
-    uranus->radius = 25362.0f * SCALE_FACTOR;
-    createCircleShape(uranus);
-}
-void initNeptune(Presset* neptune) {
-    neptune->name = "neptune";
-    neptune->pos = vector2f(4495100.0f, 0.0f);
-    scalePosition(&neptune->pos);
-    neptune->velocity = vector2f(0.0f, 5.43f);
-    neptune->mass = 102410.0f;
-    neptune->radius = 24622.0f * SCALE_FACTOR;
-    createCircleShape(neptune);
-}
-void initPluto(Presset* pluto) {
-    pluto->name = "pluto";
-    pluto->pos = vector2f(5906380.0f, 0.0f);
-    scalePosition(&pluto->pos);
-    pluto->velocity = vector2f(0.0f, 4.74f);
-    pluto->mass = 13.03f;
-    pluto->radius = 1188.3f * SCALE_FACTOR;
-    createCircleShape(pluto);
-}
-#pragma endregion
 
-void initPlanet(Planet* planet) {
-    initSun(&planet->sun);
-    initMercury(&planet->mercury);
-    initVenus(&planet->venus);
-    initEarth(&planet->earth);
-    initMoon(&planet->moon);
-    initMars(&planet->mars);
-    initJupiter(&planet->jupiter);
-    initSaturn(&planet->saturn);
-    initUranus(&planet->uranus);
-    initNeptune(&planet->neptune);
-    initPluto(&planet->pluto);
-}
 
-void updatePlanets(){
-    
-}
-
-void displayPlanets(sfRenderWindow* window){
-    sfRenderWindow_drawCircleShape(window, planet.sun.shape, NULL);
-    sfRenderWindow_drawCircleShape(window, planet.mercury.shape, NULL);
-    sfRenderWindow_drawCircleShape(window, planet.venus.shape, NULL);
-    sfRenderWindow_drawCircleShape(window, planet.earth.shape, NULL);
-    sfRenderWindow_drawCircleShape(window, planet.moon.shape, NULL);
-    sfRenderWindow_drawCircleShape(window, planet.mars.shape, NULL);
-    sfRenderWindow_drawCircleShape(window, planet.jupiter.shape, NULL);
-    sfRenderWindow_drawCircleShape(window, planet.saturn.shape, NULL);
-    sfRenderWindow_drawCircleShape(window, planet.uranus.shape, NULL);
-    sfRenderWindow_drawCircleShape(window, planet.neptune.shape, NULL);
-    sfRenderWindow_drawCircleShape(window, planet.pluto.shape, NULL);
+void displayPlanets(sfRenderWindow* window) {
+    for (int i = 0; i < planetList->size(planetList); i++){
+        Planet* body = planetList->getData(planetList, i);
+        sfRenderWindow_drawCircleShape(window, body->shape, NULL);
+    }
 }
 
 void destroyPlanets(){

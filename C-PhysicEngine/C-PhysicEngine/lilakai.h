@@ -3,6 +3,8 @@
 #include "SFML/Graphics.h"
 #include "SFML/Audio.h"
 #include "SFML/System.h"
+#include "CSTL/List.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -16,8 +18,15 @@
 #define SCORE_PATH(name) "../Resources/scores/"#name".sc"
 //#define getTexture(name) sfTexture_createFromFile(TEXTURE_PATH(name),NULL) //le getTexture du pauvre
 #define getSound(name) sfSoundBuffer_createFromFile(SOUND_PATH(name))
-#define NULL2f vector2f(0.f,0.f)
+#define NULL2f vec2f(0.f,0.f)
 #define NULL2i vector2i(0,0)
+#define printf_d(string, ...) DebugPrint(string, __VA_ARGS__)
+#define dt getDeltaTime()
+
+#define FOR_EACH_LIST(list, type, it_name, data_container_name, func) \
+  for (int it_name = 0; it_name < list->size(list); it_name++) { \
+    type* data_container_name = list->getData(list,i); \
+    func }
 
 sfFont* font;
 sfText* finishText;
@@ -34,6 +43,10 @@ extern const float uranusGravity;
 extern const float neptuneGravity;
 extern const float plutoGravity;
 
+typedef struct sfVector2d {
+	double x;
+	double y;
+}sfVector2d;
 
 typedef enum Control{
 	GAMEPAD,
@@ -63,8 +76,9 @@ extern const float e;
 extern const float tau;
 extern const float phi;
 extern const float epsilon;
+extern const double gravitionalConstant;
 
-#define vec2f sfVector2f
+#define vector2f sfVector2f
 #define vec2i sfVector2i
 #define WINDOWED sfDefaultStyle
 #define BORDERLESS sfNone
@@ -286,7 +300,7 @@ inline sfColor randomColor() {
 @param b: The y component of the vector
 @return A sfVector2f with the given parameters
 */
-inline vec2f vector2f(float a, float b) {
+inline vector2f vec2f(float a, float b) {
 	sfVector2f tmp = { a, b };
 	return tmp;
 }
@@ -308,7 +322,7 @@ inline vec2i vector2i(int a, int b) {
 @param b: The second vector
 @return A sfVector2f with the sum of the two vectors
 */
-inline vec2f addVector(vec2f a, vec2f b) {
+inline vector2f addVector(vector2f a, vector2f b) {
 	return (sfVector2f) { a.x + b.x, a.y + b.y };
 }
 
@@ -318,7 +332,7 @@ inline vec2f addVector(vec2f a, vec2f b) {
 @param b: The second vector
 @return A sfVector2f with the difference of the two vectors
 */
-inline vec2f subVector(vec2f a, vec2f b) {
+inline vector2f subVector(vector2f a, vector2f b) {
 	return (sfVector2f) { a.x - b.x, a.y - b.y };
 }
 
@@ -328,7 +342,7 @@ inline vec2f subVector(vec2f a, vec2f b) {
 @param b: The float to multiply by
 @return A sfVector2f with the product of the vector and the float
 */
-inline vec2f multiplyVector(vec2f a, float b) {
+inline vector2f multiplyVector(vector2f a, float b) {
 	return (sfVector2f) { a.x* b, a.y* b };
 }
 
@@ -338,7 +352,7 @@ inline vec2f multiplyVector(vec2f a, float b) {
 @param b: The float to divide by
 @return A sfVector2f with the quotient of the vector and the float
 */
-inline vec2f divideVector(vec2f a, float b) {
+inline vector2f divideVector(vector2f a, float b) {
 	return (sfVector2f) { a.x / b, a.y / b };
 }
 
@@ -347,7 +361,7 @@ inline vec2f divideVector(vec2f a, float b) {
 @param vec: The vector to get the magnitude of
 @return The magnitude of the vector
 */
-inline float getMagnitude(vec2f vec){
+inline float getMagnitude(vector2f vec){
 	return sqrtf((vec.x * vec.x) + (vec.y * vec.y));
 }
 
@@ -356,7 +370,7 @@ inline float getMagnitude(vec2f vec){
 @param vec: The vector to normalize
 @return A normalized sfVector2f 
 */
-inline vec2f normalizeVec2f(vec2f vec){
+inline vector2f normalizeVec2f(vector2f vec){
 	float magnitude = getMagnitude(vec);
 	if (magnitude == 0.f)
 		return (sfVector2f) { 0.f, 0.f };
@@ -369,7 +383,7 @@ inline vec2f normalizeVec2f(vec2f vec){
 @param vec2: The second vector
 @return The dot product of the two vectors
 */
-inline float dotProduct(vec2f vec1, vec2f vec2) {
+inline float dotProduct(vector2f vec1, vector2f vec2) {
 	return vec1.x * vec2.x + vec1.y * vec2.y;
 }
 
@@ -391,7 +405,7 @@ inline float lerp(float a, float b, float t) {
 @return The interpolated vector
 
 */
-inline vec2f lerpVector(vec2f vec1, vec2f vec2, float t) {
+inline vector2f lerpVector(vector2f vec1, vector2f vec2, float t) {
 	return  (sfVector2f) { lerp(vec1.x, vec2.x, t), lerp(vec1.y, vec2.y, t) };
 }
 /*

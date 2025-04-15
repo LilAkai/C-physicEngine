@@ -7,6 +7,7 @@ const float e = 2.71828f;
 const float tau = 6.28318f;
 const float phi = 1.61803f;
 const float epsilon = 0.00001f;
+const double gravitionalConstant = 6.674e-11;
 
 
 const float sunGravity = 27400.f; // 274 m/s^2

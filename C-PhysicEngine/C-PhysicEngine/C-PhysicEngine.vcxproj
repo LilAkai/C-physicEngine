@@ -116,7 +116,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)\lib\msvc;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>csfml-window.lib; csfml-system.lib; csfml-network.lib; csfml-graphics.lib; csfml-audio.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>csfml-window.lib;csfml-system.lib;csfml-network.lib;csfml-graphics.lib;csfml-audio.lib;CSTL.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

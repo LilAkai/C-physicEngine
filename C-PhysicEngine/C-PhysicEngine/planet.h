@@ -1,28 +1,15 @@
 #include "lilakai.h"
 
-typedef struct Presset {
+typedef struct Planet {
 	sfCircleShape* shape;
 	
-	vec2f pos;
-	vec2f velocity; //en Km
-	float mass; //en Tonnes
+	vector2f pos;
+	vector2f velocity; //en Km/h
+	float mass; //en milliers de tonnes
 	float radius; //en Km
 	char* name;
-}Presset;
-typedef struct Planet{
-	Presset sun;
-	Presset mercury;
-	Presset venus;
-	Presset earth;
-	Presset moon;
-	Presset mars;
-	Presset jupiter;
-	Presset saturn;
-	Presset uranus;
-	Presset neptune;
-	Presset pluto;
 }Planet;
-Planet planet;
+stdList* planetList;
 
 void initPlanets();
 void updatePlanets();
