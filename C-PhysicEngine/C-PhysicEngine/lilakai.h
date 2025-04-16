@@ -13,11 +13,6 @@
 #include <math.h>
 #include <Windows.h>
 
-#define TEXTURE_PATH(name) "../Resources/textures/"#name".png"
-#define FONT_PATH(name) "../Resources/Fonts/"#name".ttf"
-#define SCORE_PATH(name) "../Resources/scores/"#name".sc"
-//#define getTexture(name) sfTexture_createFromFile(TEXTURE_PATH(name),NULL) //le getTexture du pauvre
-#define getSound(name) sfSoundBuffer_createFromFile(SOUND_PATH(name))
 #define NULL2f vec2f(0.f,0.f)
 #define NULL2i vector2i(0,0)
 #define printf_d(string, ...) DebugPrint(string, __VA_ARGS__)
@@ -25,11 +20,8 @@
 
 #define FOR_EACH_LIST(list, type, it_name, data_container_name, func) \
   for (int it_name = 0; it_name < list->size(list); it_name++) { \
-    type* data_container_name = list->getData(list,i); \
+    type* data_container_name = list->getData(list,it_name);\
     func }
-
-sfFont* font;
-sfText* finishText;
 
 extern const float sunGravity;
 extern const float mercuryGravity;
@@ -48,29 +40,6 @@ typedef struct sfVector2d {
 	double y;
 }sfVector2d;
 
-typedef enum Control{
-	GAMEPAD,
-	KEYBOARD,
-}Control;
-Control control;
-
-typedef enum PlayerMode {
-	PLAYER1,
-	PLAYER2,
-}PlayerMode;
-PlayerMode playerMode;
-
-typedef enum stateGame{
-	LVL1,
-	LVL2,
-	LVL3,
-	LVL4,
-	LVL5,
-	MENU,
-	LVL_FINISHED,
-}stateGame;
-stateGame state;
-
 #define PI 3.14159265358979323846264338327950288419716
 #define RAD2DEG 57.295779f
 #define DEG2RAD 0.017453f
@@ -82,13 +51,16 @@ extern const float phi;
 extern const float epsilon;
 extern const double gravitionalConstant;
 
+float mouseWheelDirection;
+float dtMult;
+
 #define vector2f sfVector2f
-#define vec2i sfVector2i
+#define vector2i sfVector2i
 #define WINDOWED sfDefaultStyle
 #define BORDERLESS sfNone
 
-vec2i mousePos;
-vec2i globalMousePos;
+vector2i mousePos;
+vector2i globalMousePos;
 
 #pragma region PS5
 #define LSTICK_RIGHT(id) sfJoystick_getAxisPosition(id,sfJoystickX) >15
@@ -320,8 +292,17 @@ inline vector2f vec2f(float a, float b) {
 @param b: The y component of the vector
 @return A sfVector2i with the given parameters
 */
-inline vec2i vector2i(int a, int b) {
+inline vector2i vec2i(int a, int b) {
 	sfVector2i tmp = { a, b };
+	return tmp;
+}
+
+inline vector2i vec2f2i(vector2f vec) {
+	vector2i tmp = vec2i(vec.x,vec.y);
+	return tmp;
+}
+inline vector2f vec2i2f(vector2i vec) {
+	vector2f tmp = vec2f(vec.x,vec.y);
 	return tmp;
 }
 
@@ -331,7 +312,7 @@ inline vec2i vector2i(int a, int b) {
 @param b: The second vector
 @return A sfVector2f with the sum of the two vectors
 */
-inline vector2f addVector(vector2f a, vector2f b) {
+inline vector2f addVec2f(vector2f a, vector2f b) {
 	return (sfVector2f) { a.x + b.x, a.y + b.y };
 }
 
@@ -341,7 +322,7 @@ inline vector2f addVector(vector2f a, vector2f b) {
 @param b: The second vector
 @return A sfVector2f with the difference of the two vectors
 */
-inline vector2f subVector(vector2f a, vector2f b) {
+inline vector2f subVec2f(vector2f a, vector2f b) {
 	return (sfVector2f) { a.x - b.x, a.y - b.y };
 }
 
@@ -351,7 +332,7 @@ inline vector2f subVector(vector2f a, vector2f b) {
 @param b: The float to multiply by
 @return A sfVector2f with the product of the vector and the float
 */
-inline vector2f multiplyVector(vector2f a, float b) {
+inline vector2f multiplyVec2f(vector2f a, float b) {
 	return (sfVector2f) { a.x* b, a.y* b };
 }
 
@@ -361,7 +342,7 @@ inline vector2f multiplyVector(vector2f a, float b) {
 @param b: The float to divide by
 @return A sfVector2f with the quotient of the vector and the float
 */
-inline vector2f divideVector(vector2f a, float b) {
+inline vector2f divideVec2f(vector2f a, float b) {
 	return (sfVector2f) { a.x / b, a.y / b };
 }
 
@@ -383,7 +364,7 @@ inline vector2f normalizeVec2f(vector2f vec){
 	float magnitude = getMagnitude(vec);
 	if (magnitude == 0.f)
 		return (sfVector2f) { 0.f, 0.f };
-	return divideVector(vec, magnitude);
+	return divideVec2f(vec, magnitude);
 }
 
 /*
@@ -414,7 +395,7 @@ inline float lerp(float a, float b, float t) {
 @return The interpolated vector
 
 */
-inline vector2f lerpVector(vector2f vec1, vector2f vec2, float t) {
+inline vector2f lerpVec(vector2f vec1, vector2f vec2, float t) {
 	return  (sfVector2f) { lerp(vec1.x, vec2.x, t), lerp(vec1.y, vec2.y, t) };
 }
 /*
@@ -426,12 +407,11 @@ inline sfVector2f polCoordsToEuclCoords(sfVector2f _polCoords){
 	return ((sfVector2f) { _polCoords.x* (cosf(_polCoords.y)), _polCoords.x* (sinf(_polCoords.y)) });
 }
 
-inline sfVector2f GetVectorFromAngle(sfVector2f pos, float lenght, float angle)
-{
+inline sfVector2f GetVectorFromAngle(sfVector2f pos, float lenght, float angle){
 	angle *= DEG2RAD;
 
-	float x = pos.x + lenght * (float)cos(angle);
-	float y = pos.y + lenght * (float)sin(angle);
+	float x = pos.x + lenght * cosf(angle);
+	float y = pos.y + lenght * sinf(angle);
 
 	return vec2f(x, y);
 }

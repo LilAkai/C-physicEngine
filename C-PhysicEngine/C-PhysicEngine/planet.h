@@ -7,7 +7,11 @@ typedef struct Planet {
 	vector2f velocity; //en Km/h
 	double mass; //en tonnes
 	float radius; //en Km
-	char* name;
+	const char* name; 
+	
+	vector2f* history;
+    int historyIndex;
+    int historySize;
 }Planet;
 stdList* planetList;
 
@@ -15,3 +19,5 @@ void initPlanets();
 void updatePlanets();
 void displayPlanets(sfRenderWindow* window);
 void destroyPlanets();
+
+vector2f computeAcceleration(Planet* planet);

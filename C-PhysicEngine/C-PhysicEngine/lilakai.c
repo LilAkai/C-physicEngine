@@ -48,7 +48,7 @@ void restartClock(){
 
 float getDeltaTime(){
 	if (keyPressed(LControl))
-		return 10.f* sfTime_asSeconds(sftime);
+		return dtMult* sfTime_asSeconds(sftime);
 	if (sfTime_asSeconds(sftime) < 0.1f)
 		return sfTime_asSeconds(sftime);
 	else return 0.1f;

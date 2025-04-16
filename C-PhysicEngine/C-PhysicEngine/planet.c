@@ -1,6 +1,4 @@
 #include "planet.h"
-
-// Définition des constantes d'affichage et de conversion
 #define WINDOW_SIZEX 1920
 #define WINDOW_SIZEY 1080
 #define CENTER_X (WINDOW_SIZEX / 2.f)
@@ -10,10 +8,9 @@
 // Constante gravitationnelle en simulation (adaptée pour utiliser les vraies masses)
 // La valeur de 5.8e-22f a été obtenue (approximativement) pour obtenir des orbites réalistes
 // dans vos unités (pixels, secondes) sachant que, par exemple, pour la Terre : 
-// orbitDistance = (563 - 540)*5 = 115 pixels et M_sun ? 1.989e27.
-// Ainsi, v = sqrt( SIM_G * 1.989e27 / 115 ) ? 100 pixels/s.
+// orbitDistance = (563 - 540)*5 = 115 pixels et M_sun ? 1.989e27
+// Ainsi, v = sqrt( SIM_G * 1.989e27 / 115 ) ? 100 pixels/s
 #define SIM_G 5.8e-22f
-
 // Pour éviter les singularités lorsque des corps se rapprochent trop,
 // le softening est appliqué dans le calcul des forces.
 #define SOFTENING 7.f
@@ -57,8 +54,9 @@ void pushNewPlanet(const char* name, float pos, float velocity, float mass, floa
         body->velocity = vec2f(0.f, 0.f);
     }
     else {
-        // Calcul de la distance orbitale en pixels
-        float orbitDistance = (pos - 540.f) * ORBIT_MULTIPLIER;
+        // Calcul de la distance orbitale en pixels, en tenant compte du Soleil
+        float orbitDistance = (pos - 540.f) * ORBIT_MULTIPLIER + 50.f;
+
         // Position sur l'axe horizontal par rapport au centre (Soleil)
         body->pos = vec2f(CENTER_X + orbitDistance, CENTER_Y);
         // Récupération du Soleil déjà créé dans planetList
@@ -72,6 +70,9 @@ void pushNewPlanet(const char* name, float pos, float velocity, float mass, floa
     body->mass = mass;   // Masse en kg (dans vos unités, par ex. 1.989e27 pour le Soleil)
     body->radius = radius; // Rayon d'affichage en pixels (indépendant de la masse réelle)
     body->name = name;
+    body->historySize = 500; // Nombre initial de positions à stocker
+    body->history = malloc(body->historySize * sizeof(vector2f));
+    body->historyIndex = 0;
 
     createCircleShape(body);
     planetList->push_back(&planetList, body);
@@ -96,11 +97,11 @@ vector2f computeAcceleration(Planet* planet) {
         Planet* other = planetList->getData(planetList, j);
         if (other == planet)
             continue;
-        vector2f direction = subVector(other->pos, planet->pos);
+        vector2f direction = subVec2f(other->pos, planet->pos);
         float distance = sqrt(direction.x * direction.x + direction.y * direction.y);
         if (distance < 1.f)
             distance = 1.f;
-        float softenedDistanceSq = distance * distance + SOFTENING * SOFTENING;
+        float softenedDistanceSq = distance * distance /*+ SOFTENING * SOFTENING*/;
         float accelerationMagnitude = (SIM_G * other->mass) / softenedDistanceSq;
         totalAcceleration.x += accelerationMagnitude * (direction.x / distance);
         totalAcceleration.y += accelerationMagnitude * (direction.y / distance);
@@ -153,12 +154,12 @@ void updatePlanets() {
     if (keyPressed(Tab)) {
         destroyPlanets();
         initPlanets();
+        dtMult = 10.f;
     }
 }
 
 void displayPlanets(sfRenderWindow* window) {
-    int n = planetList->size(planetList);
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < planetList->size(planetList); i++) {
         Planet* body = planetList->getData(planetList, i);
         sfRenderWindow_drawCircleShape(window, body->shape, NULL);
     }

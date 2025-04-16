@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -142,10 +142,16 @@
     <ClCompile Include="lilakai.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="planet.c" />
+    <ClCompile Include="source.c" />
+    <ClCompile Include="trajectory.c" />
+    <ClCompile Include="view.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="lilakai.h" />
     <ClInclude Include="planet.h" />
+    <ClInclude Include="source.h" />
+    <ClInclude Include="trajectory.h" />
+    <ClInclude Include="view.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
