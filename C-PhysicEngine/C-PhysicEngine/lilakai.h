@@ -72,6 +72,10 @@ typedef enum stateGame{
 stateGame state;
 
 #define PI 3.14159265358979323846264338327950288419716
+#define RAD2DEG 57.295779f
+#define DEG2RAD 0.017453f
+
+
 extern const float e;
 extern const float tau;
 extern const float phi;
@@ -210,6 +214,11 @@ sfBool circleCollision(sfVector2f _pos1, sfVector2f _pos2, float _rayon1, float 
 @note This function checks if the two rectangles overlap by checking their left, right, top, and bottom edges.
 */
 sfBool Rectangle_Collision(sfFloatRect _box1, sfFloatRect _box2);
+
+inline bool PointInCircle(sfVector2f _pos, sfVector2f _circle_pos, float _rayon)
+{
+	return ((_pos.x - _circle_pos.x) * (_pos.x - _circle_pos.x) + (_pos.y - _circle_pos.y) * (_pos.y - _circle_pos.y) < _rayon * _rayon);
+}
 
 /*
 @brief Check if a circle is colliding with a rectangle
@@ -416,6 +425,17 @@ inline vector2f lerpVector(vector2f vec1, vector2f vec2, float t) {
 inline sfVector2f polCoordsToEuclCoords(sfVector2f _polCoords){
 	return ((sfVector2f) { _polCoords.x* (cosf(_polCoords.y)), _polCoords.x* (sinf(_polCoords.y)) });
 }
+
+inline sfVector2f GetVectorFromAngle(sfVector2f pos, float lenght, float angle)
+{
+	angle *= DEG2RAD;
+
+	float x = pos.x + lenght * (float)cos(angle);
+	float y = pos.y + lenght * (float)sin(angle);
+
+	return vec2f(x, y);
+}
+
 
 /*inline bool unitTestCreateVector(vec2f a, vec2f b, vec2f expected);
 inline bool unitTestAddVector(vec2f a, vec2f b, vec2f expected);

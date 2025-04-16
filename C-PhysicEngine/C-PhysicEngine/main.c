@@ -1,7 +1,7 @@
 ﻿#include "planet.h"
 
 void main(int argc, char** argv) {
-    sfVideoMode mode = { 1000,1000,32 };
+    sfVideoMode mode = { 1920,1080,32 };
     sfRenderWindow* window = sfRenderWindow_create(mode, "Pang", BORDERLESS, NULL);
 
     initTools();

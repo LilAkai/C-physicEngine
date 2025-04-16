@@ -5,7 +5,7 @@ typedef struct Planet {
 	
 	vector2f pos;
 	vector2f velocity; //en Km/h
-	float mass; //en milliers de tonnes
+	double mass; //en tonnes
 	float radius; //en Km
 	char* name;
 }Planet;
