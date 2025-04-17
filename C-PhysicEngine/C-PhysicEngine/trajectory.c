@@ -1,4 +1,6 @@
 #include "trajectory.h"
+#define MAX_TRAIL_LENGTH 2000
+
 sfMutex* trajectoryMutex;
 sfVertexArray* trajectoryArray;
 
@@ -41,13 +43,10 @@ void predictTrajectory(Planet* planet, vector2f* futurePositions) {
     }
 }
 
-
 void initTrajectories() {
     trajectoryArray = sfVertexArray_create();
     sfVertexArray_setPrimitiveType(trajectoryArray, sfLines);
 }
-
-#define MAX_TRAIL_LENGTH 2000
 
 void updateTrajectories() {
     sfVertexArray_clear(trajectoryArray); // On vide le tableau global avant de le réremplir
@@ -88,9 +87,9 @@ void updateTrajectories() {
                 sfVertex v1, v2;
                 // Le segment entre le point j et le point j+1
                 v1.position = planet->history[j];
-                v1.color = sfColor_fromRGB(255, 255, 255);
+                v1.color = sfWhite;
                 v2.position = planet->history[j + 1];
-                v2.color = sfColor_fromRGB(255, 255, 255);
+                v2.color = sfWhite;
                 sfVertexArray_append(trajectoryArray, v1);
                 sfVertexArray_append(trajectoryArray, v2);
             }

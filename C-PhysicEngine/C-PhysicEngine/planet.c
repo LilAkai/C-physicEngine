@@ -3,17 +3,15 @@
 #define WINDOW_SIZEY 1080
 #define CENTER_X (WINDOW_SIZEX / 2.f)
 #define CENTER_Y (WINDOW_SIZEY / 2.f)
-#define ORBIT_MULTIPLIER 5.f
 
-// Constante gravitationnelle en simulation (adaptée pour utiliser les vraies masses)
-// La valeur de 5.8e-22f a été obtenue (approximativement) pour obtenir des orbites réalistes
-// dans vos unités (pixels, secondes) sachant que, par exemple, pour la Terre : 
-// orbitDistance = (563 - 540)*5 = 115 pixels et M_sun ? 1.989e27
-// Ainsi, v = sqrt( SIM_G * 1.989e27 / 115 ) ? 100 pixels/s
+#define SCALE 200.f
+
 #define SIM_G 5.8e-22f
-// Pour éviter les singularités lorsque des corps se rapprochent trop,
-// le softening est appliqué dans le calcul des forces.
 #define SOFTENING 7.f
+
+#define EARTH_MOON_DISTANCE 0.00257f
+#define MOON_ORBIT_RADIUS (EARTH_MOON_DISTANCE * SCALE)
+#define MOON_BOOST_FACTOR 300.f
 
 void createCircleShape(Planet* body) {
     body->shape = sfCircleShape_create();
@@ -23,121 +21,91 @@ void createCircleShape(Planet* body) {
         sfCircleShape_setPosition(body->shape, body->pos);
         sfCircleShape_setTexture(body->shape, getTexture(body->name), NULL);
     }
-    else {
-        printf_d("%s init failed: %d", body->name, __LINE__);
-    }
 }
 
-/*
-  La fonction pushNewPlanet crée et positionne chaque corps.
-
-  Pour le Soleil (nom "sun") :
-    - Il est placé au centre de l'écran et reste fixe.
-
-  Pour chacun des autres corps :
-    - Le paramètre "pos" sert de référence pour définir la distance orbitale
-      (orbitDistance = (pos - 540) * ORBIT_MULTIPLIER).
-    - La position est alors : (CENTER_X + orbitDistance, CENTER_Y).
-    - La vitesse orbitale idéale pour une orbite circulaire est calculée par :
-         v = sqrt( SIM_G * M_sun / orbitDistance )
-      Ici, M_sun est la masse du Soleil,
-      que nous récupérons depuis le premier élément de planetList (déjà créé).
-    - La vitesse initiale est orientée verticalement (tangente à une orbite circulaire
-      pour un corps situé à droite du Soleil).
-*/
-void pushNewPlanet(const char* name, float pos, float velocity, float mass, float radius) {
+void pushNewPlanet(const char* name, float orbitDistanceReal, float mass, float radius) {
+    // orbitDistanceReal sera donné en UA ou unité adaptée et sera converti en pixels.
     Planet* body = malloc(sizeof(Planet));
-
-    if (strcmp(name, "sun") == 0) {
-        // Le Soleil est au centre et reste fixe
-        body->pos = vec2f(CENTER_X, CENTER_Y);
-        body->velocity = vec2f(0.f, 0.f);
-    }
-    else {
-        // Calcul de la distance orbitale en pixels, en tenant compte du Soleil
-        float orbitDistance = (pos - 540.f) * ORBIT_MULTIPLIER + 50.f;
-
-        // Position sur l'axe horizontal par rapport au centre (Soleil)
-        body->pos = vec2f(CENTER_X + orbitDistance, CENTER_Y);
-        // Récupération du Soleil déjà créé dans planetList
-        Planet* sun = planetList->getData(planetList, 0);
-        // Calcul de la vitesse orbitale idéale pour une orbite circulaire
-        float orbitalSpeed = sqrt(SIM_G * sun->mass / orbitDistance);
-        // Vitesse initiale (tangente à l'orbite, ici verticale vers le haut)
-        body->velocity = vec2f(0.f, -orbitalSpeed);
-    }
-
-    body->mass = mass;   // Masse en kg (dans vos unités, par ex. 1.989e27 pour le Soleil)
-    body->radius = radius; // Rayon d'affichage en pixels (indépendant de la masse réelle)
     body->name = name;
-    body->historySize = 500; // Nombre initial de positions à stocker
+    body->mass = mass;
+    body->radius = radius;
+    body->historySize = 500;
     body->history = malloc(body->historySize * sizeof(vector2f));
     body->historyIndex = 0;
 
+    if (strcmp(name, "sun") == 0) {
+        body->pos = vec2f(CENTER_X, CENTER_Y);
+        body->velocity = vec2f(0.f, 0.f);
+    }
+    else if (strcmp(name, "moon") == 0) {
+        Planet* earth = planetList->getData(planetList, 3);
+        if (!earth) return;
+        float orbitRadius = MOON_ORBIT_RADIUS; // par exemple 2.f
+        body->pos = vec2f(earth->pos.x + orbitRadius, earth->pos.y);
+        vector2f radial = subVec2f(body->pos, earth->pos); // radial = (orbitRadius, 0)
+        float len = sqrt(radial.x * radial.x + radial.y * radial.y);
+        if (len == 0.f) len = 1.f;
+        vector2f normalizedRadial = vec2f(radial.x / len, radial.y / len);
+        // Calculer la tangente en tournant le vecteur radial de -90° pour tenir compte de l'axe Y positif vers le bas.
+        vector2f tangent = vec2f(normalizedRadial.y, -normalizedRadial.x);
+        float relSpeed = sqrt(SIM_G * earth->mass / orbitRadius) * MOON_BOOST_FACTOR;
+        body->velocity = vec2f(earth->velocity.x + tangent.x * relSpeed,
+            earth->velocity.y + tangent.y * relSpeed);
+    }
+    else {
+        // Pour une planète qui orbite autour du Soleil,
+        // orbitDistanceReal est la distance réelle (exprimée dans UA ou unité choisie)
+        // La distance en pixels
+        float orbitDistancePix = orbitDistanceReal * SCALE;
+        body->pos = vec2f(CENTER_X + orbitDistancePix, CENTER_Y);
+        Planet* sun = planetList->getData(planetList, 0);
+        float orbitalSpeed = sqrt(SIM_G * sun->mass / orbitDistancePix);
+        // Pour que l'orbite soit tangente, la vitesse est initialisée verticalement négative
+        body->velocity = vec2f(0.f, -orbitalSpeed);
+    }
     createCircleShape(body);
     planetList->push_back(&planetList, body);
 }
 
-/*
-  computeAcceleration calcule l'accélération exercée sur une planète
-  par la contribution gravitationnelle de tous les autres corps de la simulation.
-
-  Pour chaque corps "other" différent de la planète considérée,
-   - On calcule le vecteur direction,
-   - On applique un softening lorsque la distance est faible,
-   - L'accélération résultante est :
-         a = SIM_G * other->mass / (distance^2 + SOFTENING^2)
-     dans la direction (normalisée) allant de la planète vers "other".
-*/
 vector2f computeAcceleration(Planet* planet) {
     int numPlanets = planetList->size(planetList);
     vector2f totalAcceleration = vec2f(0.f, 0.f);
-
     for (int j = 0; j < numPlanets; j++) {
         Planet* other = planetList->getData(planetList, j);
-        if (other == planet)
-            continue;
+        if (other == planet) continue;
         vector2f direction = subVec2f(other->pos, planet->pos);
         float distance = sqrt(direction.x * direction.x + direction.y * direction.y);
-        if (distance < 1.f)
-            distance = 1.f;
-        float softenedDistanceSq = distance * distance /*+ SOFTENING * SOFTENING*/;
-        float accelerationMagnitude = (SIM_G * other->mass) / softenedDistanceSq;
-        totalAcceleration.x += accelerationMagnitude * (direction.x / distance);
-        totalAcceleration.y += accelerationMagnitude * (direction.y / distance);
+        if (distance < 1.f) distance = 1.f;
+        float softenedDistanceSq = distance * distance + SOFTENING * SOFTENING;
+        float accMag = (SIM_G * other->mass) / softenedDistanceSq;
+        // Pour la Lune, renforcer l'effet de la Terre
+        if (strcmp(planet->name, "moon") == 0 && strcmp(other->name, "earth") == 0)
+            accMag *= MOON_BOOST_FACTOR;
+        totalAcceleration.x += accMag * (direction.x / distance);
+        totalAcceleration.y += accMag * (direction.y / distance);
     }
     return totalAcceleration;
 }
 
-/*
-  initPlanets initialise le système avec les vraies masses (en kg, ici réduites d'un facteur 1e?3)
-  et d'autres paramètres d'affichage.
-
-  Les valeurs "pos" servent ici de référence pour déterminer l'orbite relative.
-  Par exemple, la Terre a un "pos" de 563, ce qui donne :
-    orbitDistance = (563 - 540) * ORBIT_MULTIPLIER = 23 * 5 = 115 pixels
-  Puis la vitesse initiale est calculée en fonction de la masse du Soleil fourni dans l'appel précédent.
-*/
 void initPlanets() {
     planetList = STD_LIST_CREATE(Planet, 0);
-    pushNewPlanet("sun", 540.f, 0.f, 1.989e27, 50.f);
-    pushNewPlanet("mercury", 547.f, 0.f, 3.3011e20, 5.f);
-    pushNewPlanet("venus", 554.f, 0.f, 4.8675e21, 6.f);
-    pushNewPlanet("earth", 563.f, 0.f, 5.97237e21, 6.f);
-    pushNewPlanet("moon", 563.4f, 0.f, 7.342e19, 2.f);
-    pushNewPlanet("mars", 573.f, 0.f, 6.4171e20, 4.f);
-    pushNewPlanet("jupiter", 618.f, 0.f, 1.8982e24, 20.f);
-    pushNewPlanet("saturn", 682.f, 0.f, 5.6834e23, 18.f);
-    pushNewPlanet("uranus", 827.f, 0.f, 8.6810e22, 14.f);
-    pushNewPlanet("neptune", 993.f, 0.f, 1.02413e23, 14.f);
-    pushNewPlanet("pluto", 1120.f, 0.f, 1.303e19, 3.f);
+    // Ici orbitDistanceReal est en UA ou en unité relative.
+    // On place le Soleil au centre (pas de conversion)
+    pushNewPlanet("sun", 0.f, 1.989e27, 50.f);
+    // Par exemple, Mercury à 0.39 UA, Venus à 0.72 UA, Earth à 1 UA, Mars à 1.52 UA, etc.
+    pushNewPlanet("mercury", 0.39f, 3.3011e20, 5.f);
+    pushNewPlanet("venus", 0.72f, 4.8675e21, 6.f);
+    pushNewPlanet("earth", 1.f, 5.97237e21, 6.f);
+    // La Lune ne prend pas de distance réelle ici, elle est calculée par rapport à la Terre.
+    pushNewPlanet("moon", 0.f, 7.342e19, 2.f);
+    pushNewPlanet("mars", 1.52f, 6.4171e20, 4.f);
+    pushNewPlanet("jupiter", 5.2f, 1.8982e24, 20.f);
+    pushNewPlanet("saturn", 9.54f, 5.6834e23, 18.f);
+    pushNewPlanet("uranus", 19.19f, 8.6810e22, 14.f);
+    pushNewPlanet("neptune", 30.06f, 1.02413e23, 14.f);
+    pushNewPlanet("pluto", 39.48f, 1.303e19, 3.f);
 }
 
-/*
-  updatePlanets met à jour la position de chaque corps selon la méthode d'Euler.
-  Chaque planète voit sa vitesse et position modifiées par l'accélération calculée
-  via computeAcceleration (qui cumule l'influence gravitationnelle de tous les autres).
-*/
 void updatePlanets() {
     int numPlanets = planetList->size(planetList);
     for (int i = 1; i < numPlanets; i++) {
@@ -149,8 +117,6 @@ void updatePlanets() {
         planet->pos.y += planet->velocity.y * dt;
         sfCircleShape_setPosition(planet->shape, planet->pos);
     }
-
-    // Démonstration de réinitialisation si besoin (par exemple en appuyant sur Tab)
     if (keyPressed(Tab)) {
         destroyPlanets();
         initPlanets();

@@ -23,7 +23,6 @@ void saveClaim() {
     fprintf(file, "@version: %s\n\n", claim.version);
 
     fclose(file);
-    printf_d("Metadata saved successfully!\n");
 }
 
 void loadClaim() {
@@ -60,5 +59,4 @@ void loadClaim() {
     printf("******************************/\n");
 
     fclose(file);
-    printf_d("Metadata loaded successfully!\n");
 }

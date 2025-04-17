@@ -38,10 +38,10 @@ void updateView(sfRenderWindow* window) {
     // Gestion de la rotation de la caméra avec la souris
     if (mousePressed(Right)) {
         if (mousePos.y > lastMousePos.y || mousePos.x > lastMousePos.x) {
-            viewAngle += 5.f;
+            viewAngle += 3.f;
         }
         if (mousePos.y < lastMousePos.y || mousePos.x < lastMousePos.x) {
-            viewAngle -= 5.f;
+            viewAngle -= 3.f;
         }
     }
 

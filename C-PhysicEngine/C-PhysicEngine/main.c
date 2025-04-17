@@ -6,9 +6,12 @@
 @version: beta-v0.1
 ******************************/
 
+//TODO faire les gravités entre les planetes
+
 #include "view.h"
 #include "source.h"
 #include "trajectory.h"
+#include "grid.h"
 
 void main(int argc, char** argv) {
     sfVideoMode mode = { 1920,1080,32 };
@@ -57,15 +60,10 @@ void main(int argc, char** argv) {
         updateTrajectories();
         /*↑↑↑updates↑↑↑*/
 
-        printf_d("Nombre de planètes : %d\n", planetList->size(planetList));
-        for (int i = 0; i < planetList->size(planetList); i++) {
-            Planet* body = planetList->getData(planetList, i);
-            printf("Planète %s, historique : %d positions\n", body->name, body->historyIndex);
-        }
-
         sfRenderWindow_clear(window, sfBlack);
-        displayView(window);
         /*↓↓↓display↓↓↓*/
+        drawGrid(window, 35.f);
+        displayView(window);
         drawTrajectories(window);
         displayPlanets(window);
         //drawFutureTrajectories(window);

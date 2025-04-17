@@ -139,6 +139,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="grid.c" />
     <ClCompile Include="lilakai.c" />
     <ClCompile Include="main.c" />
     <ClCompile Include="planet.c" />
@@ -147,6 +148,7 @@
     <ClCompile Include="view.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="grid.h" />
     <ClInclude Include="lilakai.h" />
     <ClInclude Include="planet.h" />
     <ClInclude Include="source.h" />
